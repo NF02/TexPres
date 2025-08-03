@@ -140,7 +140,7 @@ impl SentTextViewer {
 		main_job.append("\n\n", 0.0, TextFormat::default());
             }
             
-            if paragraph.starts_with("# ") {
+            if paragraph.starts_with("* ") {
 		main_job.append(
                     &paragraph[2..],
                     0.0,
@@ -150,7 +150,7 @@ impl SentTextViewer {
 			..Default::default()
                     },
 		);
-            } else if paragraph.starts_with("## ") {
+            } else if paragraph.starts_with("** ") {
 		main_job.append(
                     &paragraph[3..],
                     0.0,
@@ -160,7 +160,7 @@ impl SentTextViewer {
 			..Default::default()
                     },
 		);
-            }else if paragraph.starts_with("### ") {
+            }else if paragraph.starts_with("*** ") {
 		main_job.append(
                     &paragraph[4..],
                     0.0,

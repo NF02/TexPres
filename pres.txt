@@ -1,14 +1,14 @@
-# TexPres: (Tex)t (Pres)entation
+* TexPres: (Tex)t (Pres)entation
 
-## Author: nfvblog
+** Author: nfvblog
 ---
-# Cos'è
+* Cos'è
 
 Un praticissimo visualizzatore di slide.txt, pensato proprio per semplificare la vita a chi vuole scrivere in modo rapido le sue slide
 
 ---
 
-# Supporta le emoji
+* Supporta le emoji
 
 😀 😄 😁 😆 😅 😂 💔 💛 💘
 

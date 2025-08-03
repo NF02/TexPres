@@ -1,9 +1,7 @@
 #+TITLE: TexPres - Presentazioni Testuali Minimaliste
-#+AUTHOR: nfvblog
+#+AUTHOR: Nicola Ferru Aka nfvblog
 #+LANGUAGE: it
 
-* Descrizione
-** Un visualizzatore di presentazioni semplice ed efficace
 TexPres è un'applicazione minimalista per creare e visualizzare presentazioni a partire da file di testo semplice. Perfetto per:
 - Presentazioni rapide
 - Slide con contenuto tecnico
@@ -13,7 +11,7 @@ TexPres è un'applicazione minimalista per creare e visualizzare presentazioni a
 - Formato file semplice (testo con separatori ~---~)
 - Nessuna dipendenza complessa
 - Interfaccia pulita e leggera
-- Supporta formattazione base (titoli, paragrafi, sottoparagrafi)
+- Supporta formattazione base con la sintassi di Org Mode (titoli, paragrafi, sottoparagrafi)
 
 * Installazione
 ** Requisiti
@@ -37,8 +35,8 @@ Contenuto slide
 con più righe
 
 ---
-# Titolo formattato
-## Sottotitolo
+ ,* Titolo formattato
+ ,** Sottotitolo
 Testo normale
 #+END_EXAMPLE
 
@@ -64,7 +62,7 @@ Testo normale
 
 * Sviluppo
 ** Roadmap
-- [ ] Supporto markdown avanzato
+- [ ] Supporto org-mode avanzato
 - [ ] Timer presentazione
 - [ ] Esportazione PDF
 - [ ] Note per presentatore
@@ -77,7 +75,7 @@ Testo normale
 5. Crea una Pull Request
 
 * Licenza
-Distribuito sotto licenza MIT. Vedi il file ~LICENSE~ per i dettagli.
+Distribuito sotto licenza GPL-3.0. Vedi il file ~LICENSE~ per i dettagli.
 
 * Screenshot
 #+CAPTION: Esempio di presentazione
