@@ -1,0 +1,84 @@
+#+TITLE: TexPres - Presentazioni Testuali Minimaliste
+#+AUTHOR: nfvblog
+#+LANGUAGE: it
+
+* Descrizione
+** Un visualizzatore di presentazioni semplice ed efficace
+TexPres è un'applicazione minimalista per creare e visualizzare presentazioni a partire da file di testo semplice. Perfetto per:
+- Presentazioni rapide
+- Slide con contenuto tecnico
+- Chi preferisce lavorare con editor di testo
+
+** Caratteristiche principali
+- Formato file semplice (testo con separatori ~---~)
+- Nessuna dipendenza complessa
+- Interfaccia pulita e leggera
+- Supporta formattazione base (titoli, paragrafi, sottoparagrafi)
+
+* Installazione
+** Requisiti
+- Rust (ultima versione stabile)
+- Cargo
+
+** Compilazione
+#+BEGIN_SRC sh
+git clone https://github.com/tuorepo/TexPres.git
+cd TexPres
+cargo build --release
+#+END_SRC
+
+* Utilizzo
+** Formato file
+Le presentazioni usano un formato semplice:
+#+BEGIN_EXAMPLE
+Titolo slide
+---
+Contenuto slide
+con più righe
+
+---
+# Titolo formattato
+## Sottotitolo
+Testo normale
+#+END_EXAMPLE
+
+** Avvio
+#+BEGIN_SRC sh
+./target/release/TexPres percorso/file_slide.txt
+#+END_SRC
+
+* Comandi
+| Tasto      | Azione                  |
+|------------+-------------------------|
+| Freccia →  | Slide successiva        |
+| Freccia ←  | Slide precedente        |
+| Spazio     | Auto-avanzamento        |
+| Ctrl+Wheel | Zoom testo              |
+| Esc        | Esci                    |
+
+* Personalizzazione
+** Parametri opzionali
+- Dimensione font iniziale (modificabile con Ctrl+MouseWheel)
+- Tema chiaro/scuro (tasto D)
+- Margini regolabili nel codice
+
+* Sviluppo
+** Roadmap
+- [ ] Supporto markdown avanzato
+- [ ] Timer presentazione
+- [ ] Esportazione PDF
+- [ ] Note per presentatore
+
+** Come contribuire
+1. Forka il repository
+2. Crea un branch (~git checkout -b feature/nuova-feature~)
+3. Commit (~git commit -am 'Aggiungi nuova funzionalità'~)
+4. Push (~git push origin feature/nuova-feature~)
+5. Crea una Pull Request
+
+* Licenza
+Distribuito sotto licenza MIT. Vedi il file ~LICENSE~ per i dettagli.
+
+* Screenshot
+#+CAPTION: Esempio di presentazione
+[[./screenshot.png]]

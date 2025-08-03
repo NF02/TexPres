@@ -160,6 +160,16 @@ impl SentTextViewer {
 			..Default::default()
                     },
 		);
+            }else if paragraph.starts_with("### ") {
+		main_job.append(
+                    &paragraph[4..],
+                    0.0,
+                    TextFormat {
+			font_id: subtitle_font_id.clone(),
+			color: text_color,
+			..Default::default()
+                    },
+		);
             } else {
 		main_job.append(
                     paragraph,
