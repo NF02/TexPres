@@ -68,11 +68,16 @@ Testo normale
 - [ ] Note per presentatore
 
 ** Come contribuire
+*** Contributo diretto
 1. Forka il repository
 2. Crea un branch (~git checkout -b feature/nuova-feature~)
 3. Commit (~git commit -am 'Aggiungi nuova funzionalità'~)
 4. Push (~git push origin feature/nuova-feature~)
 5. Crea una Pull Request
+
+*** Monetario
+Puoi farmi una donazione su Ko-Fi, aiutandomi a dedicare più tempo alla scrittura
+di codice.
 
 * Licenza
 Distribuito sotto licenza GPL-3.0. Vedi il file ~LICENSE~ per i dettagli.
