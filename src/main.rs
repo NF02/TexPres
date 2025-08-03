@@ -34,7 +34,7 @@ fn main() {
             .with_inner_size(egui::vec2(800.0, 600.0))
             .with_min_inner_size(egui::vec2(300.0, 200.0))
             .with_decorations(true)
-            .with_title("Zagor never hesitates to act!"),
+            .with_title("TexPres"),
         ..Default::default()
     };
 

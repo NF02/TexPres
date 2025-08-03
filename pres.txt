@@ -1,4 +1,4 @@
-Zagor never hesitates to act!
+TexPres: (Tex)t (Pres)entation
 
 Author: nfvblog
 ---
@@ -7,4 +7,4 @@ Un praticissimo visualizzatore di slide.txt, pensato proprio per semplificare la
 
 ---
 
-sticazzi
+
