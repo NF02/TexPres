@@ -38,6 +38,7 @@ pub struct SentTextViewer {
     auto_advance: bool,
     last_advance_time: Option<f64>,
     advance_interval: f64,
+    fullscreen: bool,
 }
 
 impl SentTextViewer {
@@ -67,6 +68,7 @@ impl SentTextViewer {
             should_quit: false,
             dark_mode: true,
             auto_advance: false,
+	    fullscreen: false,
             last_advance_time: None,
             advance_interval: 5.0,
         };
@@ -104,34 +106,80 @@ impl SentTextViewer {
         self.auto_advance = !self.auto_advance;
         self.last_advance_time = None;
     }
-
     fn centered_text_layout(&self, ui: &mut egui::Ui, text: &str) {
-        let mut job = LayoutJob::default();
-        job.halign = egui::Align::Center;
-        job.wrap.max_width = ui.available_width();
-
-        let font_id = egui::FontId::proportional(self.font_size);
-        job.append(
-            text,
-            0.0,
-            TextFormat {
-                font_id: font_id.clone(),
-                color: ui.style().visuals.text_color(),
-                ..Default::default()
-            },
-        );
-
-        let galley = ui.fonts(|f| f.layout_job(job));
-        let text_height = galley.rect.height();
-        let available_height = ui.available_height();
-        let top_padding = (available_height - text_height) / 2.0;
-
-        ui.vertical(|ui| {
-            if top_padding > 0.0 {
-                ui.add_space(top_padding);
+	// Calcola l'area disponibile
+	let available_rect = ui.available_rect_before_wrap();
+	let max_text_width = available_rect.width() * 0.8;
+	
+	// Dividi il testo in paragrafi
+	let paragraphs: Vec<&str> = text.split("\n\n").collect();
+	
+	// Prepara il layout principale
+	let mut main_job = LayoutJob::default();
+	main_job.halign = egui::Align::Center;
+	main_job.wrap.max_width = max_text_width;
+	
+	// Crea le font id necessarie (risolvendo l'errore di move)
+	let base_font_id = egui::FontId {
+            size: self.font_size,
+            family: egui::FontFamily::Proportional,
+	};
+	let title_font_id = egui::FontId {
+            size: self.font_size * 1.5,
+            family: base_font_id.family.clone(),
+	};
+	let subtitle_font_id = egui::FontId {
+            size: self.font_size * 1.2,
+            family: base_font_id.family.clone(),
+	};
+	
+	let text_color = ui.style().visuals.text_color();
+	
+	for (i, paragraph) in paragraphs.iter().enumerate() {
+            if i > 0 {
+		main_job.append("\n\n", 0.0, TextFormat::default());
             }
-            ui.label(galley);
-        });
+            
+            if paragraph.starts_with("# ") {
+		main_job.append(
+                    &paragraph[2..],
+                    0.0,
+                    TextFormat {
+			font_id: title_font_id.clone(),
+			color: text_color,
+			..Default::default()
+                    },
+		);
+            } else if paragraph.starts_with("## ") {
+		main_job.append(
+                    &paragraph[3..],
+                    0.0,
+                    TextFormat {
+			font_id: subtitle_font_id.clone(),
+			color: text_color,
+			..Default::default()
+                    },
+		);
+            } else {
+		main_job.append(
+                    paragraph,
+                    0.0,
+                    TextFormat {
+			font_id: base_font_id.clone(),
+			color: text_color,
+			..Default::default()
+                    },
+		);
+            }
+	}
+	
+	// Calcola e disegna il testo centrato
+	let galley = ui.fonts(|f| f.layout_job(main_job));
+	let pos = egui::pos2(
+            available_rect.center().x - galley.size().x / 50.0,
+            available_rect.center().y - galley.size().y / 2.0,
+	);
+	ui.painter().galley(pos, galley, text_color);
     }
 
     fn handle_input(&mut self, ctx: &egui::Context) {
@@ -174,6 +222,11 @@ impl SentTextViewer {
         }
     }
 
+    fn toggle_fullscreen(&mut self, ctx: &egui::Context) {
+        self.fullscreen = !self.fullscreen;
+        ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(self.fullscreen));
+    }
+
     fn render_ui(&mut self, ctx: &egui::Context) {
         // Imposta il tema
         ctx.set_visuals(if self.dark_mode {
@@ -183,10 +236,12 @@ impl SentTextViewer {
         });
 
         // Pannello principale con la slide
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default()
+	    .frame(egui::Frame::NONE)
+	    .show(ctx, |ui| {
             if let Some(current_slide) = self.slides.get(self.current_slide_index) {
-                self.centered_text_layout(ui, current_slide);
-            } else {
+		self.centered_text_layout(ui, current_slide);
+	    } else {
                 ui.centered_and_justified(|ui| {
                     ui.label("Errore: Nessuna diapositiva da mostrare.");
                 });
@@ -219,10 +274,25 @@ impl SentTextViewer {
                     self.toggle_auto_advance();
                 }
 
+		// goto slide
+		ui.horizontal(|ui| {
+		    ui.label("Go to slide:");
+		    if ui.add(egui::Slider::new(&mut self.current_slide_index, 0..=self.slides.len().saturating_sub(1)))
+			.changed()
+		    {
+			self.goto_slide(self.current_slide_index);
+		    }
+		});
+
                 // Controllo tema
                 if ui.button(if self.dark_mode { "☀️" } else { "🌙" }).clicked() {
                     self.dark_mode = !self.dark_mode;
                 }
+
+		// Pulsante fullscreen
+		if ui.button(if self.fullscreen { "🖵 Exit Fullscreen" } else { "🖵 Fullscreen" }).clicked() {
+		    self.toggle_fullscreen(ctx);
+		}
 
                 // Controllo zoom
                 ui.label(format!("Zoom: {:.0}%", (self.font_size / 24.0) * 100.0));
