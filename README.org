@@ -18,6 +18,11 @@ TexPres è un'applicazione minimalista per creare e visualizzare presentazioni a
 - Rust (ultima versione stabile)
 - Cargo
 
+*** Arch Linux
+#+begin_src sh
+  sudo pacman -S rust cargo
+#+end_src
+
 ** Compilazione
 #+BEGIN_SRC sh
 git clone https://github.com/tuorepo/TexPres.git
@@ -63,7 +68,7 @@ Testo normale
 * Sviluppo
 ** Roadmap
 - [ ] Supporto org-mode avanzato
-- [ ] Timer presentazione
+- [X] Timer presentazione
 - [ ] Esportazione PDF
 - [ ] Note per presentatore
 
