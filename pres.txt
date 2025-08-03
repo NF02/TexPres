@@ -7,4 +7,8 @@ Un praticissimo visualizzatore di slide.txt, pensato proprio per semplificare la
 
 ---
 
+Supporta le emoji
 
+😀 😄 😁 😆 😅 😂 💔 💛 💘
+
+---

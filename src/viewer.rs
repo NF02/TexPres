@@ -1,175 +1,257 @@
 use eframe::egui;
-use std::fs;
-use std::path::PathBuf;
+use std::{fs, path::PathBuf, sync::Arc, process};
 use egui::text::{LayoutJob, TextFormat};
-use std::process;
 
 pub const SLIDE_DELIMITER: &str = "---";
 
-/// La struct principale per l'applicazione del visualizzatore di testo.
+#[derive(Debug)]
+pub enum AppError {
+    IoError(std::io::Error),
+    EmptyFile,
+    ParseError(String),
+}
+
+impl From<std::io::Error> for AppError {
+    fn from(err: std::io::Error) -> Self {
+        AppError::IoError(err)
+    }
+}
+
+impl std::fmt::Display for AppError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AppError::IoError(e) => write!(f, "IO Error: {}", e),
+            AppError::EmptyFile => write!(f, "Empty file or no slides found"),
+            AppError::ParseError(s) => write!(f, "Parse error: {}", s),
+        }
+    }
+}
+
 pub struct SentTextViewer {
-    slides: Vec<String>,
+    slides: Vec<Arc<str>>,
     current_slide_index: usize,
     font_size: f32,
+    first_slide: bool,
+    last_slide: bool,
     should_quit: bool,
+    dark_mode: bool,
+    auto_advance: bool,
+    last_advance_time: Option<f64>,
+    advance_interval: f64,
 }
 
 impl SentTextViewer {
-    /// Costruttore per SentTextViewer.
-    pub fn new(file_path: &PathBuf, font_size: f32) -> Result<Self, String> {
-        let content = fs::read_to_string(file_path)
-            .map_err(|e| format!("Errore nella lettura del file {}: {}", file_path.display(), e))?;
+    pub fn new(file_path: &PathBuf, font_size: f32) -> Result<Self, AppError> {
+        let content = fs::read_to_string(file_path)?;
+        
+        if content.trim().is_empty() {
+            return Err(AppError::EmptyFile);
+        }
 
-        let slides: Vec<String> = content
+        let slides: Vec<Arc<str>> = content
             .split(SLIDE_DELIMITER)
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
+            .map(|s| Arc::from(s.trim()))
+            .filter(|s: &Arc<str>| !s.is_empty())
             .collect();
 
         if slides.is_empty() {
-            return Err(format!("Nessuna diapositiva trovata nel file '{}'. Assicurati che le diapositive siano separate da '{}'.", file_path.display(), SLIDE_DELIMITER));
+            return Err(AppError::EmptyFile);
         }
 
-        Ok(SentTextViewer {
+        let mut viewer = Self {
             slides,
             current_slide_index: 0,
             font_size,
+            first_slide: true,
+            last_slide: false,
             should_quit: false,
-        })
+            dark_mode: true,
+            auto_advance: false,
+            last_advance_time: None,
+            advance_interval: 5.0,
+        };
+        viewer.update_slide_status();
+        Ok(viewer)
     }
 
-    /// Passa alla diapositiva successiva.
+    fn update_slide_status(&mut self) {
+        self.first_slide = self.current_slide_index == 0;
+        self.last_slide = self.current_slide_index == self.slides.len() - 1;
+    }
+
     fn next_slide(&mut self) {
-        if self.current_slide_index < self.slides.len() - 1 {
+        if !self.last_slide {
             self.current_slide_index += 1;
+            self.update_slide_status();
         }
     }
 
-    /// Torna alla diapositiva precedente.
     fn prev_slide(&mut self) {
-        if self.current_slide_index > 0 {
+        if !self.first_slide {
             self.current_slide_index -= 1;
+            self.update_slide_status();
         }
     }
 
-    /// Funzione di utilità per il layout e la centratura del testo.
+    fn goto_slide(&mut self, index: usize) {
+        if index < self.slides.len() {
+            self.current_slide_index = index;
+            self.update_slide_status();
+        }
+    }
+
+    fn toggle_auto_advance(&mut self) {
+        self.auto_advance = !self.auto_advance;
+        self.last_advance_time = None;
+    }
+
     fn centered_text_layout(&self, ui: &mut egui::Ui, text: &str) {
-        let wrap_width = ui.available_width();
-        
         let mut job = LayoutJob::default();
         job.halign = egui::Align::Center;
-        job.wrap.max_width = wrap_width;
+        job.wrap.max_width = ui.available_width();
 
-        // Itera sulle righe del testo.
-        let mut lines = text.lines();
-        
-        // Formatta la prima riga con un font più grande.
-        if let Some(first_line) = lines.next() {
-            let font_id_large = egui::FontId::proportional(self.font_size * 1.0);
-            let start_idx = job.text.len();
-            job.text.push_str(first_line);
-            let end_idx = job.text.len();
-            job.sections.push(egui::text::LayoutSection {
-                leading_space: 0.0,
-                byte_range: start_idx..end_idx,
-                format: TextFormat {
-                    font_id: font_id_large,
-                    color: ui.style().visuals.text_color(),
-                    ..Default::default()
-                },
-            });
-            job.text.push('\n');
-        }
-
-        // Formatta le restanti righe con il font standard.
-        let font_id_regular = egui::FontId::proportional(self.font_size);
-        for line in lines {
-            let start_idx = job.text.len();
-            job.text.push_str(line);
-            let end_idx = job.text.len();
-            job.sections.push(egui::text::LayoutSection {
-                leading_space: 0.0,
-                byte_range: start_idx..end_idx,
-                format: TextFormat {
-                    font_id: font_id_regular.clone(), // Cloniamo il valore per ogni iterazione.
-                    color: ui.style().visuals.text_color(),
-                    ..Default::default()
-                },
-            });
-            job.text.push('\n');
-        }
-        
-        // Rimuove la newline finale se presente.
-        if job.text.ends_with('\n') {
-            job.text.pop();
-        }
+        let font_id = egui::FontId::proportional(self.font_size);
+        job.append(
+            text,
+            0.0,
+            TextFormat {
+                font_id: font_id.clone(),
+                color: ui.style().visuals.text_color(),
+                ..Default::default()
+            },
+        );
 
         let galley = ui.fonts(|f| f.layout_job(job));
-
         let text_height = galley.rect.height();
         let available_height = ui.available_height();
         let top_padding = (available_height - text_height) / 2.0;
 
-        // Aggiunge un'imbottitura per l'allineamento verticale al centro
-        if top_padding > 0.0 {
-            ui.add_space(top_padding);
-        }
-
-        ui.add(egui::Label::new(galley));
+        ui.vertical(|ui| {
+            if top_padding > 0.0 {
+                ui.add_space(top_padding);
+            }
+            ui.label(galley);
+        });
     }
-}
 
-impl eframe::App for SentTextViewer {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Gestione degli input da tastiera.
+    fn handle_input(&mut self, ctx: &egui::Context) {
         ctx.input(|i| {
+            // Gestione tasti rapidi
             for event in &i.events {
                 if let egui::Event::Key { key, pressed, .. } = event {
                     if *pressed {
                         match key {
                             egui::Key::ArrowRight | egui::Key::N => self.next_slide(),
                             egui::Key::ArrowLeft | egui::Key::P => self.prev_slide(),
-                            egui::Key::Q | egui::Key::Escape => {
-                                self.should_quit = true;
-                            },
+                            egui::Key::Q | egui::Key::Escape => self.should_quit = true,
+                            egui::Key::Space => self.toggle_auto_advance(),
+                            egui::Key::D => self.dark_mode = !self.dark_mode,
                             _ => {}
                         }
                     }
                 }
             }
+
+            // Zoom con Ctrl+MouseWheel
+            if i.modifiers.ctrl {
+                let scroll_delta = i.raw_scroll_delta.y;
+                self.font_size = (self.font_size + scroll_delta * 2.0)
+                    .clamp(12.0, 72.0);
+            }
         });
 
+        // Avanzamento automatico
+        if self.auto_advance {
+            let now = ctx.input(|i| i.time);
+            if let Some(last_time) = self.last_advance_time {
+                if now - last_time > self.advance_interval {
+                    self.next_slide();
+                    self.last_advance_time = Some(now);
+                }
+            } else {
+                self.last_advance_time = Some(now);
+            }
+        }
+    }
+
+    fn render_ui(&mut self, ctx: &egui::Context) {
+        // Imposta il tema
+        ctx.set_visuals(if self.dark_mode {
+            egui::Visuals::dark()
+        } else {
+            egui::Visuals::light()
+        });
+
+        // Pannello principale con la slide
         egui::CentralPanel::default().show(ctx, |ui| {
-            if let Some(current_slide_content) = self.slides.get(self.current_slide_index) {
-                self.centered_text_layout(ui, current_slide_content);
+            if let Some(current_slide) = self.slides.get(self.current_slide_index) {
+                self.centered_text_layout(ui, current_slide);
             } else {
                 ui.centered_and_justified(|ui| {
                     ui.label("Errore: Nessuna diapositiva da mostrare.");
                 });
             }
         });
-        
+
+        // Barra di controllo in basso
         egui::TopBottomPanel::bottom("controls_panel").show(ctx, |ui| {
-            ui.set_height(20.0);
-            ui.add_space(5.0);
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                 ui.label(format!("Diapositiva {} / {}", self.current_slide_index + 1, self.slides.len()));
+            ui.horizontal(|ui| {
+                // Pulsanti di navigazione
+                ui.add_enabled_ui(!self.first_slide, |ui| {
+                    if ui.button("← Prev").clicked() {
+                        self.prev_slide();
+                    }
+                });
+
+                ui.add_enabled_ui(!self.last_slide, |ui| {
+                    if ui.button("Next →").clicked() {
+                        self.next_slide();
+                    }
+                });
+
+                // Indicatore slide
+                ui.label(format!("Slide {}/{}", 
+                    self.current_slide_index + 1, 
+                    self.slides.len()));
+
+                // Controllo avanzamento automatico
+                if ui.button(if self.auto_advance { "⏸" } else { "▶" }).clicked() {
+                    self.toggle_auto_advance();
+                }
+
+                // Controllo tema
+                if ui.button(if self.dark_mode { "☀️" } else { "🌙" }).clicked() {
+                    self.dark_mode = !self.dark_mode;
+                }
+
+                // Controllo zoom
+                ui.label(format!("Zoom: {:.0}%", (self.font_size / 24.0) * 100.0));
+
+                // Pulsante uscita
+                if ui.button("Quit").clicked() {
+                    self.should_quit = true;
+                }
             });
         });
+    }
+}
 
-        // Controlla il flag di uscita alla fine del frame.
+impl eframe::App for SentTextViewer {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.handle_input(ctx);
+        self.render_ui(ctx);
+        
         if self.should_quit {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             process::exit(0);
         }
-	
-    }
-
-    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        println!("SentTextViewer terminato.");
     }
 
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        [0.1, 0.1, 0.1, 1.0]
+        if self.dark_mode {
+            [0.1, 0.1, 0.1, 1.0]
+        } else {
+            [0.95, 0.95, 0.95, 1.0]
+        }
     }
 }
