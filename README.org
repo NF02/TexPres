@@ -20,7 +20,7 @@ TexPres è un'applicazione minimalista per creare e visualizzare presentazioni a
 
 *** Arch Linux
 #+begin_src sh
-  sudo pacman -S rust cargo
+  sudo pacman -S rust
 #+end_src
 
 ** Compilazione
